@@ -56,6 +56,136 @@ pip install -e .
 ```
 We developed and tested Chatterbox on Python 3.11 on Debian 11 OS; the versions of the dependencies are pinned in `pyproject.toml` to ensure consistency. You can modify the code or dependencies in this installation mode.
 
+## Google Colab Usage
+
+To run Chatterbox in Google Colab with a public API endpoint, use the provided `public_app.py`:
+
+1. In a Colab cell, run:
+```python
+# Install required dependencies
+!pip install chatterbox-tts pyngrok
+
+# Download or copy the public_app.py file to your Colab environment
+
+# Run the API server
+!python public_app.py
+```
+
+2. The server will start and display a public URL like:
+```
+🌍 Public URL: http://xxxxxxx.ngrok.io
+```
+
+3. You can now access the API documentation at:
+```
+{public_url}/docs
+```
+
+### API Endpoints
+
+- `GET /` - Root endpoint with API information
+- `GET /languages` - Get all supported languages
+- `POST /tts` - Generate speech from text
+- `GET /health` - Health check endpoint
+
+### TTS Parameters
+
+When calling the `/tts` endpoint, you can use these parameters:
+
+- `text` (required): Text to synthesize (max 300 chars)
+- `language_id` (required): Language code (en, fr, de, hi, etc.)
+- `exaggeration`: Speech expressiveness (0.25-2.0, default 0.5)
+- `temperature`: Randomness in generation (0.05-5.0, default 0.8)
+- `seed`: Random seed, 0 for random (default 0)
+- `cfg_weight`: CFG/Pace weight (0.2-1.0, 0 for transfer, default 0.5)
+- `audio_prompt`: Optional reference audio file for voice cloning
+
+### Example Usage
+
+After starting the server, you can synthesize speech with a simple curl command:
+
+```bash
+curl -X POST "http://xxxxxxx.ngrok.io/tts" \
+     -H "accept: audio/wav" \
+     -H "Content-Type: application/x-www-form-urlencoded" \
+     -d "text=Hello, this is a test&language_id=en&exaggeration=0.5&temperature=0.8&seed=0&cfg_weight=0.5" \
+     --output output.wav
+```
+
+Or using Python requests in Colab:
+
+```python
+import requests
+
+response = requests.post(
+    "http://xxxxxxx.ngrok.io/tts",
+    data={
+        "text": "Hello, this is a test",
+        "language_id": "en",
+        "exaggeration": 0.5,
+        "temperature": 0.8,
+        "seed": 0,
+        "cfg_weight": 0.5
+    }
+)
+
+# Save the audio file
+with open("output.wav", "wb") as f:
+    f.write(response.content)
+```
+
+### Ngrok Setup (Optional but Recommended)
+
+For a more stable public URL, you can set up an ngrok account and use an authentication token:
+
+1. Sign up at https://ngrok.com/
+2. Get your auth token from the dashboard
+3. When running the server, pass your token:
+
+```python
+# In Colab, you can pass the token like this:
+!python public_app.py --ngrok-token=YOUR_NGROK_TOKEN
+```
+
+### Local Development with Public Access
+
+For local development with public access, you can use several methods:
+
+1. **Ngrok Method (Recommended)**:
+   ```bash
+   # Install dependencies
+   pip install python-dotenv pyngrok
+   
+   # Set up your ngrok auth token in .env file
+   cp .env.example .env
+   # Edit .env and add your NGROK_AUTH_TOKEN
+   
+   # Run with ngrok
+   python public_app.py --ngrok --port 8000
+   ```
+
+2. **Gradio Sharing Method**:
+   ```bash
+   # Run with Gradio's built-in sharing
+   python public_app.py --expose-api --port 8000
+   ```
+
+3. **Local Only**:
+   ```bash
+   # Run locally only
+   python public_app.py --port 8000
+   ```
+
+### Environment Variables
+
+Create a `.env` file in the project root with the following configuration:
+
+```bash
+# Ngrok Configuration
+# Get your auth token from https://dashboard.ngrok.com/get-started/your-authtoken
+NGROK_AUTH_TOKEN=your_ngrok_auth_token_here
+```
+
 # Usage
 ```python
 import torchaudio as ta
