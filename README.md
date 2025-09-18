@@ -56,34 +56,28 @@ pip install -e .
 ```
 We developed and tested Chatterbox on Python 3.11 on Debian 11 OS; the versions of the dependencies are pinned in `pyproject.toml` to ensure consistency. You can modify the code or dependencies in this installation mode.
 
-## Google Colab Usage
+## Running the Services
 
-To run Chatterbox in Google Colab with a public API endpoint, use the provided `public_app.py`:
-
-1. In a Colab cell, run:
-```python
-# Install required dependencies
-!pip install chatterbox-tts pyngrok
-
-# Download or copy the public_app.py file to your Colab environment
-
-# Run the API server
-!python public_app.py
+## Standard Web UI (Gradio)
+To run the standard Gradio web interface:
+```bash
+python multilingual_app.py
 ```
 
-2. The server will start and display a public URL like:
-```
-🌍 Public URL: http://xxxxxxx.ngrok.io
+## FastAPI Service (WAV output)
+To run the FastAPI service that returns WAV files:
+```bash
+python -m uvicorn app:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-3. You can now access the API documentation at:
-```
-{public_url}/docs
+## FastAPI Service with PCM Support (app_pcm.py)
+To run the enhanced FastAPI service that supports both WAV and raw PCM output:
+```bash
+python -m uvicorn app_pcm:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 ### API Endpoints
 
-- `GET /` - Root endpoint with API information
 - `GET /languages` - Get all supported languages
 - `POST /tts` - Generate speech from text
 - `GET /health` - Health check endpoint
@@ -98,7 +92,96 @@ When calling the `/tts` endpoint, you can use these parameters:
 - `temperature`: Randomness in generation (0.05-5.0, default 0.8)
 - `seed`: Random seed, 0 for random (default 0)
 - `cfg_weight`: CFG/Pace weight (0.2-1.0, 0 for transfer, default 0.5)
+- `raw`: Return raw PCM if True, WAV if False (default False)
 - `audio_prompt`: Optional reference audio file for voice cloning
+
+## PCM Output Support
+
+The `app_pcm.py` service extends the standard TTS API with support for raw PCM output, which is useful for low-level audio processing applications:
+
+- When `raw=false` or not specified: Returns standard WAV audio files
+- When `raw=true`: Returns raw float32 PCM data with metadata headers
+
+PCM output includes the following custom headers:
+- `X-Sample-Rate`: Sample rate from the model (e.g., 24000)
+- `X-Num-Channels`: Number of channels (1 for mono)
+- `X-Sample-Format`: Sample format (float32)
+
+### Example Usage
+
+After starting the server, you can synthesize speech with a simple curl command:
+
+```bash
+# Standard WAV output
+curl -X POST "http://localhost:8000/tts" 
+     -H "accept: audio/wav" 
+     -H "Content-Type: application/x-www-form-urlencoded" 
+     -d "text=Hello, this is a test&language_id=en&exaggeration=0.5&temperature=0.8&seed=0&cfg_weight=0.5" 
+     --output output.wav
+
+# Raw PCM output
+curl -X POST "http://localhost:8000/tts" 
+     -H "Content-Type: application/x-www-form-urlencoded" 
+     -d "text=Hello, this is a test&language_id=en&exaggeration=0.5&temperature=0.8&seed=0&cfg_weight=0.5&raw=true" 
+     --output output.pcm
+```
+
+Or using Python requests:
+
+```python
+import requests
+
+# Standard WAV output
+response = requests.post(
+    "http://localhost:8000/tts",
+    data={
+        "text": "Hello, this is a test",
+        "language_id": "en",
+        "exaggeration": 0.5,
+        "temperature": 0.8,
+        "seed": 0,
+        "cfg_weight": 0.5
+    }
+)
+
+# Save the WAV file
+with open("output.wav", "wb") as f:
+    f.write(response.content)
+
+# Raw PCM output
+response = requests.post(
+    "http://localhost:8000/tts",
+    data={
+        "text": "Hello, this is a test",
+        "language_id": "en",
+        "exaggeration": 0.5,
+        "temperature": 0.8,
+        "seed": 0,
+        "cfg_weight": 0.5,
+        "raw": "true"
+    }
+)
+
+# Save the PCM file
+with open("output.pcm", "wb") as f:
+    f.write(response.content)
+
+# Check PCM headers
+print("Sample Rate:", response.headers.get("X-Sample-Rate"))
+print("Channels:", response.headers.get("X-Num-Channels"))
+print("Format:", response.headers.get("X-Sample-Format"))
+```
+
+### Environment Variables
+
+Create a `.env` file in the project root with the following configuration:
+
+```bash
+# Ngrok Configuration
+# Get your auth token from https://dashboard.ngrok.com/get-started/your-authtoken
+NGROK_AUTH_TOKEN=your_ngrok_auth_token_here
+```
+```
 
 ### Example Usage
 
