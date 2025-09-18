@@ -8,6 +8,13 @@ from fastapi import FastAPI, UploadFile, Form
 from fastapi.responses import StreamingResponse, JSONResponse
 from chatterbox.mtl_tts import ChatterboxMultilingualTTS, SUPPORTED_LANGUAGES
 
+# Load environment variables
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass  # dotenv is optional
+
 # # Language detection
 # try:
 #     from langdetect import detect
@@ -145,3 +152,39 @@ async def synthesize_tts(
 @app.get("/health")
 async def health_check():
     return {"status": "ok"}
+
+# ---------------------------------------------------
+# Main entry point with ngrok support
+# ---------------------------------------------------
+if __name__ == "__main__":
+    import argparse
+    import uvicorn
+    
+    parser = argparse.ArgumentParser(description="Chatterbox TTS API with optional ngrok tunneling")
+    parser.add_argument("--host", default="127.0.0.1", help="Host to bind to (default: 127.0.0.1)")
+    parser.add_argument("--port", type=int, default=8000, help="Port to bind to (default: 8000)")
+    parser.add_argument("--ngrok", action="store_true", help="Expose API via ngrok tunnel")
+    parser.add_argument("--ngrok-token", help="ngrok authentication token (optional if set in .env)")
+    
+    args = parser.parse_args()
+    
+    if args.ngrok:
+        try:
+            from pyngrok import ngrok
+            
+            # Set auth token if provided
+            ngrok_token = args.ngrok_token or os.getenv("NGROK_AUTH_TOKEN")
+            if ngrok_token:
+                ngrok.set_auth_token(ngrok_token)
+            
+            # Start ngrok tunnel
+            public_url = ngrok.connect(args.port)
+            print(f"🌍 Public URL: {public_url}")
+            print("📋 API Documentation: {public_url}/docs")
+        except ImportError:
+            print("❌ pyngrok not installed. Install with: pip install pyngrok")
+        except Exception as e:
+            print(f"❌ Failed to create ngrok tunnel: {e}")
+    
+    # Run the uvicorn server
+    uvicorn.run("app_pcm:app", host=args.host, port=args.port, reload=True)

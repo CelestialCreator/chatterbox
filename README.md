@@ -58,23 +58,44 @@ We developed and tested Chatterbox on Python 3.11 on Debian 11 OS; the versions 
 
 ## Running the Services
 
-## Standard Web UI (Gradio)
+### Standard Web UI (Gradio)
 To run the standard Gradio web interface:
 ```bash
 python multilingual_app.py
 ```
 
-## FastAPI Service (WAV output)
+### FastAPI Service (WAV output)
 To run the FastAPI service that returns WAV files:
 ```bash
 python -m uvicorn app:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-## FastAPI Service with PCM Support (app_pcm.py)
+### FastAPI Service with PCM Support (app_pcm.py)
 To run the enhanced FastAPI service that supports both WAV and raw PCM output:
+```bash
+python app_pcm.py --host 0.0.0.0 --port 8000
+```
+
+To run with ngrok tunneling for public access:
+```bash
+python app_pcm.py --host 0.0.0.0 --port 8000 --ngrok
+```
+
+To run with a specific ngrok token:
+```bash
+python app_pcm.py --host 0.0.0.0 --port 8000 --ngrok --ngrok-token YOUR_NGROK_TOKEN
+```
+
+Or set your ngrok token in the `.env` file:
+```bash
+NGROK_AUTH_TOKEN=your_ngrok_auth_token_here
+```
+
+Note: You can still use the direct uvicorn command if preferred:
 ```bash
 python -m uvicorn app_pcm:app --host 0.0.0.0 --port 8000 --reload
 ```
+However, this method won't support the ngrok integration features.
 
 ### API Endpoints
 
